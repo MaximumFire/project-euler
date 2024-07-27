@@ -1,45 +1,33 @@
+from sympy import isprime
 import json
-from sympy import isprime, prime
 from itertools import combinations
-import multiprocessing as mp
-import numpy as np
+
+cache = {}
 
 def check_combination(combo):
-    return isprime(int(f"{combo[0]}{combo[1]}")) and isprime(int(f"{combo[1]}{combo[0]}"))
+    if combo not in cache:
+        cache[combo] = isprime(int(f"{combo[0]}{combo[1]}")) and isprime(int(f"{combo[1]}{combo[0]}"))
+    return cache[combo]
 
-def carry_out_checks_on_combos(combos, output_queue):
-    for combo in combos:
-        if all([check_combination(c) for c in combinations(combo, 2)]):
-            print(combo, sum(list(combo)), flush=True)
-            output_queue.put((combo, sum(list(combo))))
-    output_queue.put(None)
+def check(combo):
+    if all([check_combination(c) for c in combinations(combo, 2)]):
+        return True
+    return False
 
-def chunks(data, chunk_size):
-    for i in range(0, len(data), chunk_size):
-        yield data[i:i + chunk_size]
+with open("C:/Users/conno/Onedrive/Documents/Github/project-euler/primes_million.json", "r+") as f:
+    primes = json.loads(f.read())["primes"][:1100]
 
-if __name__ == "__main__":  
-    n_proc = 12
-    with open("C:/Users/conno/Onedrive/Documents/Github/project-euler/primes_10_million.json", "r+") as f:
-        primes = np.array(json.loads(f.read())["primes"][:170], dtype=np.int32)
-    prime_combinations = list(combinations(primes, 5))
-    chunked_combinations = list(chunks(prime_combinations, int(sum(1 for c in prime_combinations) / n_proc)+1))
-    processes = []
-    output_queue = mp.Queue()
-    results = []
-
-    for chunk in chunked_combinations:
-        process = mp.Process(target=carry_out_checks_on_combos, args=(chunk, output_queue,))
-        processes.append(process)
-        process.start()
-
-    for process in processes:
-        process.join()
-
-    while not output_queue.empty():
-        results.append(output_queue.get())
-
-    for r in results:
-        if r:
-            print(r)
-    
+for a in primes:
+    for b in primes[primes.index(a)+1:]:
+        if not check((a, b)):
+            continue
+        for c in primes[primes.index(b)+1:]:
+            if not check((a, b, c)):
+                continue
+            for d in primes[primes.index(c)+1:]:
+                if not check((a, b, c, d)):
+                    continue
+                for e in primes[primes.index(d)+1:]:
+                    if check((a, b, c, d, e)):
+                        print((a, b, c, d, e), sum((a, b, c, d, e)))
+                        exit(0)
